@@ -1,0 +1,42 @@
+{
+  "name": "artcoma",
+  "version": "0.5.0",
+  "description": "A twitter bot that appreciates arts and surreal memes",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BooDoo/artcoma.git"
+  },
+  "keywords": [
+    "twitter",
+    "bot",
+    "art",
+    "meme",
+    "mfa",
+    "museum",
+    "scraping",
+    "imagemagick"
+  ],
+  "author": "Joel McCoy <joelmccoy+github@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/BooDoo/artcoma/issues"
+  },
+  "homepage": "https://github.com/BooDoo/artcoma#readme",
+  "dependencies": {
+    "bluebird": "^3.5.1",
+    "cheerio": "^1.0.0-rc.2",
+    "child-process-promise": "^2.2.1",
+    "lodash": "^4.17.10",
+    "mersenne-twister": "^1.1.0",
+    "mime": "^2.3.1",
+    "request": "^2.87.0",
+    "twit": "^2.2.10"
+  }
+}

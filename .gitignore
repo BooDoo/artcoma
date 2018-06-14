@@ -1,3 +1,7 @@
+# Secret/Public swaps
+*.secret.*
+*.public.*
+
 # Logs
 logs
 *.log
