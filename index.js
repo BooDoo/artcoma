@@ -38,7 +38,7 @@ function parseDate(date) {
     return date;
   }
   
-  const rangeIndicators = /[\-\–\—]|\ or\ /gi;
+  const rangeIndicators = /\ ?[\-\–\—]\ ?|\ or\ |\ to\ /gi;
   let start, end;
   date = date.split(',')[0]; // do not fuck with commas
   if (date.match(rangeIndicators)) {
