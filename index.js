@@ -37,7 +37,7 @@ function parseDate(date) {
   if (_.isUndefined(date) || _.isNull(date)) {
     return date;
   }
-  
+
   const rangeIndicators = /\ ?[\-\–\—]\ ?|\ or\ |\ to\ /gi;
   let start, end;
   date = date.split(',')[0]; // do not fuck with commas
@@ -88,7 +88,7 @@ function dateStringFromRange(range) {
   }
 
   let [start, end] = [range.start, range.end];
-  let dateString; 
+  let dateString;
 
   if (start == end) {
     if (start < 0) {
@@ -205,7 +205,7 @@ async function main(endpoint) {
   let imCall = `"${magickBin}" ${magickArgs}`;
   let callRes = await exec(imCall);
   // console.log(imCall);
-  let status = ``;
+  let status = pieceLabel;
   let altText = reply;
   return T.makeTweet(status, TMP_OUT, altText);
 }
