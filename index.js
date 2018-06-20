@@ -94,7 +94,7 @@ function dateStringFromRange(range) {
     if (start < 0) {
       dateString = `${start * -1} B.C.`;
     } else {
-      dateString = `${start}`;
+      dateString = `A.D. ${start}`;
     }
   }
   else {
@@ -201,7 +201,7 @@ async function main(endpoint) {
   let reply = `you're in luck because ${pieceLabel} can be found in the Boston Museum of Fine Arts' ${piece.gallery}`;
   // Now let's make that image:
   let magickBin = process.env.IMAGEMAGICK_BINARY || 'convert';
-  let magickArgs = `./assets/base.png -gravity Northwest -pointsize 64 -annotate +25+55 "${comaLength}" -pointsize 40 -size 925x95 -background none caption:"${pieceLabel}" -trim -geometry +142+218 -composite -pointsize 40 -size 670x150 caption:"${pieceLabel}" -trim -geometry +5+972 -composite -draw "image over 0,1110 685,600 '${TMP_IN}'" -pointsize 24 -size 760x140 caption:"${reply}" -trim -geometry +316+835 -composite ${TMP_OUT}`;
+  let magickArgs = `./assets/base.png -gravity Northwest -pointsize 64 -annotate +25+55 "${comaLength}" -pointsize 40 -size 925x200 -background none caption:"${pieceLabel}" -trim -geometry +142+218 -composite -pointsize 40 -size 670x200 -background none caption:"${pieceLabel}" -trim -geometry +5+972 -composite -draw "image over 0,1110 685,600 '${TMP_IN}'" -pointsize 24 -size 760x140 caption:"${reply}" -trim -geometry +316+835 -composite ${TMP_OUT}`;
   let imCall = `"${magickBin}" ${magickArgs}`;
   let callRes = await exec(imCall);
   // console.log(imCall);
