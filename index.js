@@ -20,6 +20,9 @@ const creds = require('./credentials');
 // Twitter interface
 const Twit = require('./lib/twithelper');
 const T = new Twit(creds.live);
+// Masto interface
+const Mastodon = require('mastodon-api');
+const M = new Mastodon(creds.live.masto);
 
 const TMP_OUT = path.join(os.tmpdir(), 'artcoma.jpg');
 const TMP_IN = path.join(os.tmpdir(), 'artpiece.jpg');
@@ -169,8 +172,23 @@ async function getPieceDetails(piece) {
 
 async function saveBinary(uri, destination) {
   let res = await request.getAsync({url: uri, encoding: 'binary'});
-  let written = fs.writeFileAsync(destination, res.body, 'binary');
+  let written = await fs.writeFileAsync(destination, res.body, 'binary');
   return res.body;
+}
+
+async function makeToot(status, mediaPath=null, altText="", client) {
+  let uploadParams = {}, uploadResponse, mediaIdStr, postParams={}, tootResponse;
+  if (!_.isEmpty(mediaPath)) {
+    uploadParams.file = fs.createReadStream(mediaPath);
+    if (!_.isEmpty(altText)) { uploadParams.description = altText; }
+    uploadResponse = await client.post('media', uploadParams);
+  }
+  mediaIdStr = uploadResponse ? uploadResponse.data.id : null;
+
+  postParams.status = status;
+  postParams.media_ids = [mediaIdStr];
+
+  return tootResponse = client.post('statuses', postParams);
 }
 
 async function main(endpoint) {
@@ -207,6 +225,8 @@ async function main(endpoint) {
   // console.log(imCall);
   let status = pieceLabel;
   let altText = reply;
+
+  let mastoRes = await makeToot(status, TMP_OUT, altText, M);
   return T.makeTweet(status, TMP_OUT, altText);
 }
 
