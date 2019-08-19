@@ -168,7 +168,7 @@ async function getPieceDetails(piece) {
   pieceDetails.culture = $('.cultureField').text().trim();
   // if (pieceDetails.culture.match(/\d\d+/)) { pieceDetails.culture=''; }
   pieceDetails.medium = $('.mediumField > .detailFieldValue').text().trim();
-  pieceDetails.gallery = $('.onviewField > .detailFieldValue').text().trim();
+  pieceDetails.gallery = $('.onviewField > .locationLink').text().trim();
   return pieceDetails;
 }
 
