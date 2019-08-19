@@ -137,10 +137,10 @@ async function getTotal(endpoint) {
 function parsePieceSummary(gridItem) {
     let pieceObj = {};
 
-    pieceObj.artist = cheerio(gridItem).find('.primaryMaker').text();
+    pieceObj.artist = cheerio(gridItem).find('.primaryMaker').text().trim();
     pieceObj.img = BASE_URL + cheerio(gridItem).find('img').get(0).attribs.src;
     pieceObj.href = BASE_URL + cheerio(gridItem).find('a').get(0).attribs.href;
-    pieceObj.date = cheerio(gridItem).find('.displayDate').text().replace(/Date:\s*/,'');
+    pieceObj.date = cheerio(gridItem).find('.displayDate').text().trim().replace(/Date:\s*/,'');
 
     pieceObj.dateRange = parseDate(pieceObj.date);
     pieceObj.dateString = dateStringFromRange(pieceObj.dateRange);
@@ -163,12 +163,12 @@ async function getPieceDetails(piece) {
     });
   let $ = cheerio.load(res);
   
-  pieceDetails.title = $('.titleField').text();
-  pieceDetails.date = $('.displayDateField')
-  pieceDetails.culture = $('.cultureField').text();
+  pieceDetails.title = $('.titleField').text().trim();
+  pieceDetails.date = $('.displayDateField').text().trim();
+  pieceDetails.culture = $('.cultureField').text().trim();
   // if (pieceDetails.culture.match(/\d\d+/)) { pieceDetails.culture=''; }
-  pieceDetails.medium = $('.mediumField > .detailFieldValue').text();
-  pieceDetails.gallery = $('.onviewField > .detailFieldValue').text();
+  pieceDetails.medium = $('.mediumField > .detailFieldValue').text().trim();
+  pieceDetails.gallery = $('.onviewField > .detailFieldValue').text().trim();
   return pieceDetails;
 }
 
@@ -205,10 +205,9 @@ async function main(endpoint) {
   let pieces = _.map(objects, parsePieceSummary);
   // Filter pieces here? For range of dates/specific wordcount/etc?
   let piece = _.sample(pieces);
-  // console.dir(piece);
   let pieceDetails = await getPieceDetails(piece);
   piece = Object.assign(piece, pieceDetails); // {title, date, href, img, dateRange, dateString, culture, medium, gallery}
-  // console.dir(piece);
+  console.dir(piece);
   // return piece;
   let imgBody = await saveBinary(piece.img, TMP_IN)
   // Strings for image generation:
