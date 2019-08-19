@@ -13,7 +13,7 @@ const qs = require('querystring');
 const cheerio = require('cheerio');
 // Promisfy some imports for convenience sake
 const fs = P.promisifyAll(require('fs'));
-const request = P.promisifyAll(require('request'));
+const rp = require('request-promise');
 const exec = require('child-process-promise').exec;
 // Read API keys etc
 const creds = require('./credentials');
@@ -116,9 +116,11 @@ function dateStringFromRange(range) {
 
 // const TARGET_ERA = _.sample(['1000+B.C.-A.D.+1','2000-1000+B.C.']);
 // const MATERIAL = _.sample(["Ceramics"]);
-const PER_PAGE = 18;
-const MAX_PAGE = 400; // rough limiter for all objects on display
-const ENDPOINT = `https://www.mfa.org/collections/search?f[0]=field_onview%3A1&f[1]=field_checkbox%3A1&page=${_.random(MAX_PAGE)}`;
+const PER_PAGE = 12;
+const MAX_PAGE = 80; // rough limiter for all CERAMIC objects on display
+// const ENDPOINT = `https://www.mfa.org/collections/search?f[0]=field_onview%3A1&f[1]=field_checkbox%3A1&page=${_.random(MAX_PAGE)}`;
+const BASE_URL = `https://collections.mfa.org`;
+const ENDPOINT = `${BASE_URL}/search/Objects/classifications%3ACeramics%3Bonview%3Atrue%3BimageExistence%3Atrue/*/images?page=${_.random(MAX_PAGE)}`;
 
 // If/when we want to be more specific about page limit:
 async function getMaxPageNumber(endpoint) {
@@ -126,29 +128,26 @@ async function getMaxPageNumber(endpoint) {
 }
 
 async function getTotal(endpoint) {
-  let resBody = await request.getAsync(endpoint);
-  return _.parseInt(cheerio.load(res.body)('div.current-search-item-text').text().replace(/\D/g,''));
+  let resBody = await rp(endpoint, {
+      headers: {'User-Agent': 'Etruscan Ceramic / Twitter bot / ART PROJECT'}
+    });
+  return _.parseInt(cheerio.load(res)('div.current-search-item-text').text().replace(/\D/g,''));
 }
 
-function parsePieceSummary(context, target) {
+function parsePieceSummary(gridItem) {
     let pieceObj = {};
-    context.text([this]).replace(/[\n\t]+/g,'\t').trim().split('\t').forEach((el,i) => {
-      let kv = el.split(': ');
-      if (i==0) {
-        pieceObj.title = kv.join(': ');
-      } else if (kv.length == 1) {
-        pieceObj.artist = kv[0];
-      } else {
-        pieceObj[kv[0].toLowerCase()] = kv[1];
-      }
-    });
-    let img = context(this).find('div.image > img').get(0).attribs.src;
-    pieceObj.href = this.parent.attribs.href;
-    pieceObj.img = img;
+
+    pieceObj.artist = cheerio(gridItem).find('.primaryMaker').text();
+    pieceObj.img = BASE_URL + cheerio(gridItem).find('img').get(0).attribs.src;
+    pieceObj.href = BASE_URL + cheerio(gridItem).find('a').get(0).attribs.href;
+    pieceObj.date = cheerio(gridItem).find('.displayDate').text().replace(/Date:\s*/,'');
+
     pieceObj.dateRange = parseDate(pieceObj.date);
     pieceObj.dateString = dateStringFromRange(pieceObj.dateRange);
+
+    // No title or no date? No return.
     if (pieceObj.title && pieceObj.date) {
-      target.push(pieceObj); // ugly this binding...
+      return null;
     }
     return pieceObj;
 }
@@ -158,22 +157,27 @@ function filterByText(context, el, regex) {
 }
 
 async function getPieceDetails(piece) {
-  const contentSelector = 'div.content > div.grid-6';
   let pieceDetails = {};
-  let res = await request.getAsync(piece.href);
-  let $ = cheerio.load(res.body);
-  let sidebar = $('div.content > div.grid-6').eq(0);
-  pieceDetails.culture = _.last(sidebar.find('p').get(0).children[0].data.split(/, ?/g)).replace(/\(.+\)/gi,'');
-  if (pieceDetails.culture.match(/\d\d+/)) { pieceDetails.culture=''; }
-  pieceDetails.medium = _.head(sidebar.find('h4').filter(function() {return filterByText($,this,/medium/i) }).next().text().split("\n")[0].trim().split(/[,;] ?/g));
-  pieceDetails.gallery = sidebar.find('h4').filter(function() {return filterByText($,this,/on view/i) }).next().text().trim();
+  let res = await rp(piece.href, {
+      headers: {'User-Agent': 'Etruscan Ceramic / Twitter bot / ART PROJECT'}
+    });
+  let $ = cheerio.load(res);
+  
+  pieceDetails.title = $('.titleField').text();
+  pieceDetails.date = $('.displayDateField')
+  pieceDetails.culture = $('.cultureField').text();
+  // if (pieceDetails.culture.match(/\d\d+/)) { pieceDetails.culture=''; }
+  pieceDetails.medium = $('.mediumField > .detailFieldValue').text();
+  pieceDetails.gallery = $('.onviewField > .detailFieldValue').text();
   return pieceDetails;
 }
 
 async function saveBinary(uri, destination) {
-  let res = await request.getAsync({url: uri, encoding: 'binary'});
-  let written = await fs.writeFileAsync(destination, res.body, 'binary');
-  return res.body;
+  let res = await rp({url: uri,
+      headers: {'User-Agent': 'Etruscan Ceramic / Twitter bot / ART PROJECT'}
+    , encoding: 'binary'});
+  let written = await fs.writeFileAsync(destination, res, 'binary');
+  return res;
 }
 
 async function makeToot(status, mediaPath=null, altText="", client) {
@@ -193,15 +197,15 @@ async function makeToot(status, mediaPath=null, altText="", client) {
 
 async function main(endpoint) {
   // console.log(`hitting ${endpoint}...`);
-  let res = await request.getAsync(endpoint);
-  let $ = cheerio.load(res.body);
-  let objects = $('div.object');
-  let pieces = [];
-  let reducePiece = _.partial(parsePieceSummary, $, pieces);
-  objects.each(reducePiece);
+  let res = await rp(endpoint, {
+      headers: {'User-Agent': 'Etruscan Ceramic / Twitter bot / ART PROJECT'}
+    });
+  let $ = cheerio.load(res);
+  let objects = $('.result.item');
+  let pieces = _.map(objects, parsePieceSummary);
   // Filter pieces here? For range of dates/specific wordcount/etc?
   let piece = _.sample(pieces);
-  // console.log(`fetching details from ${piece.href}`);
+  // console.dir(piece);
   let pieceDetails = await getPieceDetails(piece);
   piece = Object.assign(piece, pieceDetails); // {title, date, href, img, dateRange, dateString, culture, medium, gallery}
   // console.dir(piece);
