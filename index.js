@@ -163,7 +163,7 @@ async function getPieceDetails(piece) {
     });
   let $ = cheerio.load(res);
   
-  pieceDetails.title = $('.titleField').text().trim();
+  pieceDetails.title = $('.titleField > h2').text().trim();
   pieceDetails.date = $('.displayDateField').text().trim();
   pieceDetails.culture = $('.cultureField').text().trim();
   // if (pieceDetails.culture.match(/\d\d+/)) { pieceDetails.culture=''; }
