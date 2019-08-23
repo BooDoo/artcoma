@@ -117,21 +117,14 @@ function dateStringFromRange(range) {
 // const TARGET_ERA = _.sample(['1000+B.C.-A.D.+1','2000-1000+B.C.']);
 // const MATERIAL = _.sample(["Ceramics"]);
 const PER_PAGE = 12;
-const MAX_PAGE = 80; // rough limiter for all CERAMIC objects on display
+const MAX_PAGE = 550; // rough limiter for all objects on display, with images.
 // const ENDPOINT = `https://www.mfa.org/collections/search?f[0]=field_onview%3A1&f[1]=field_checkbox%3A1&page=${_.random(MAX_PAGE)}`;
 const BASE_URL = `https://collections.mfa.org`;
-const ENDPOINT = `${BASE_URL}/search/Objects/classifications%3ACeramics%3Bonview%3Atrue%3BimageExistence%3Atrue/*/images?page=${_.random(MAX_PAGE)}`;
+const ENDPOINT = `${BASE_URL}/search/Objects/onview%3Atrue%3BimageExistence%3Atrue/*/images?page=${_.random(MAX_PAGE)}`;
 
-// If/when we want to be more specific about page limit:
-async function getMaxPageNumber(endpoint) {
-  return _.floor(getTotal(endpoint) / PER_PAGE);
-}
-
-async function getTotal(endpoint) {
-  let resBody = await rp(endpoint, {
-      headers: {'User-Agent': 'Etruscan Ceramic / Twitter bot / ART PROJECT'}
-    });
-  return _.parseInt(cheerio.load(res)('div.current-search-item-text').text().replace(/\D/g,''));
+// If/when we want to be more specific about page limit, parse it from the Cheerio model of search result page
+async function getMaxPageNumber($) {
+  return _.parseInt($('span.maxPages').text().replace(/\D/g,''));
 }
 
 function parsePieceSummary(gridItem) {
