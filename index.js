@@ -130,10 +130,10 @@ async function getMaxPageNumber($) {
 function parsePieceSummary(gridItem) {
     let pieceObj = {};
 
-    pieceObj.artist = cheerio(gridItem).find('.primaryMaker').text().trim();
+    pieceObj.artist = cheerio(gridItem).find('.primaryMaker').text().trim().split("\n")[0];
     pieceObj.img = BASE_URL + cheerio(gridItem).find('img').get(0).attribs.src;
     pieceObj.href = BASE_URL + cheerio(gridItem).find('a').get(0).attribs.href;
-    pieceObj.date = cheerio(gridItem).find('.displayDate').text().trim().replace(/Date:\s*/,'');
+    pieceObj.date = cheerio(gridItem).find('.displayDate').text().trim().split("\n")[0].replace(/Date:\s*/,'');
 
     pieceObj.dateRange = parseDate(pieceObj.date);
     pieceObj.dateString = dateStringFromRange(pieceObj.dateRange);
@@ -156,12 +156,12 @@ async function getPieceDetails(piece) {
     });
   let $ = cheerio.load(res);
   
-  pieceDetails.title = $('.titleField > h2').text().trim();
-  pieceDetails.date = $('.displayDateField').text().trim();
-  pieceDetails.culture = $('.cultureField').text().trim();
+  pieceDetails.title = $('.titleField > h2').text().trim().split("\n")[0];
+  pieceDetails.date = $('.displayDateField').text().trim().split("\n")[0];
+  pieceDetails.culture = $('.cultureField').text().trim().split("\n")[0];
   // if (pieceDetails.culture.match(/\d\d+/)) { pieceDetails.culture=''; }
-  pieceDetails.medium = $('.mediumField > .detailFieldValue').text().trim();
-  pieceDetails.gallery = $('.onviewField > .locationLink').text().trim();
+  pieceDetails.medium = $('.mediumField > .detailFieldValue').text().trim().split("\n")[0];
+  pieceDetails.gallery = $('.onviewField > .locationLink').text().trim().split("\n")[0];
   return pieceDetails;
 }
 
