@@ -9,11 +9,12 @@ const _ = require('lodash');
 const P = require('bluebird');
 const os = require('os');
 const path = require('path');
+const tls = require('tls');
 const qs = require('querystring');
 const cheerio = require('cheerio');
 // Promisfy some imports for convenience sake
 const fs = P.promisifyAll(require('fs'));
-const rp = require('request-promise');
+const { curly } = require('node-libcurl');
 const exec = require('child-process-promise').exec;
 // Read API keys etc
 const creds = require('./credentials');
@@ -26,6 +27,9 @@ const M = new Mastodon(creds.live.masto);
 
 const TMP_OUT = path.join(os.tmpdir(), 'artcoma.jpg');
 const TMP_IN = path.join(os.tmpdir(), 'artpiece.jpg');
+
+// To help curly
+const certFilePath = path.join(__dirname, 'cert.pem');
 
 // Interpret a year as a year, or assume anything with letters is a century:
 function parseStartDate(d) {
@@ -128,12 +132,13 @@ async function getMaxPageNumber($) {
 }
 
 function parsePieceSummary(gridItem) {
+    const $ = cheerio.load(gridItem);
     let pieceObj = {};
-
-    pieceObj.artist = cheerio(gridItem).find('.primaryMaker').text().trim().split("\n")[0];
-    pieceObj.img = BASE_URL + cheerio(gridItem).find('img').get(0).attribs.src;
-    pieceObj.href = BASE_URL + cheerio(gridItem).find('a').get(0).attribs.href;
-    pieceObj.date = cheerio(gridItem).find('.displayDate').text().trim().split("\n")[0].replace(/Date:\s*/,'');
+    
+    pieceObj.artist = $(gridItem).find('.primaryMaker').text().trim().split("\n")[0];
+    pieceObj.img = BASE_URL + $(gridItem).find('img').get(0).attribs.src;
+    pieceObj.href = BASE_URL + $(gridItem).find('a').get(0).attribs.href;
+    pieceObj.date = $(gridItem).find('.displayDate').text().trim().split("\n")[0].replace(/Date:\s*/,'');
 
     pieceObj.dateRange = parseDate(pieceObj.date);
     pieceObj.dateString = dateStringFromRange(pieceObj.dateRange);
@@ -151,8 +156,9 @@ function filterByText(context, el, regex) {
 
 async function getPieceDetails(piece) {
   let pieceDetails = {};
-  let res = await rp(piece.href, {
-      headers: {'User-Agent': 'Etruscan Ceramic / Twitter bot / ART PROJECT'}
+  let {statusCode, data: res, headers } = await curly.get(piece.href, {
+      httpHeader: [ 'User-Agent: Etruscan Ceramic / Twitter bot / ART PROJECT'],
+      caInfo: certFilePath,
     });
   let $ = cheerio.load(res);
   
@@ -166,9 +172,11 @@ async function getPieceDetails(piece) {
 }
 
 async function saveBinary(uri, destination) {
-  let res = await rp({url: uri,
-      headers: {'User-Agent': 'Etruscan Ceramic / Twitter bot / ART PROJECT'}
-    , encoding: 'binary'});
+  let {statusCode, data: res, headers } = await curly.get(uri, {
+      httpHeader: [ 'User-Agent: Etruscan Ceramic / Twitter bot / ART PROJECT'],
+      caInfo: certFilePath,
+      curlyResponseBodyParser: false,
+    });
   let written = await fs.writeFileAsync(destination, res, 'binary');
   return res;
 }
@@ -189,9 +197,9 @@ async function makeToot(status, mediaPath=null, altText="", client) {
 }
 
 async function main(endpoint) {
-  // console.log(`hitting ${endpoint}...`);
-  let res = await rp(endpoint, {
-      headers: {'User-Agent': 'Etruscan Ceramic / Twitter bot / ART PROJECT'}
+  let { statusCode, data: res, headers } = await curly.get(endpoint, {
+      httpHeader: [ 'User-Agent: Etruscan Ceramic / Twitter bot / ART PROJECT'],
+      caInfo: certFilePath,
     });
   let $ = cheerio.load(res);
   let objects = $('.result.item');
@@ -200,9 +208,10 @@ async function main(endpoint) {
   let piece = _.sample(pieces);
   let pieceDetails = await getPieceDetails(piece);
   piece = Object.assign(piece, pieceDetails); // {title, date, href, img, dateRange, dateString, culture, medium, gallery}
-  console.dir(piece);
-  // return piece;
+  // console.dir(piece);
+
   let imgBody = await saveBinary(piece.img, TMP_IN)
+  
   // Strings for image generation:
   let thisYear = new Date().getFullYear();
   let comaLength;
@@ -226,4 +235,5 @@ async function main(endpoint) {
   return T.makeTweet(status, TMP_OUT, altText);
 }
 
+// then run
 main(ENDPOINT).then(res=>console.log(`ARTCOMA twote: ${res.data.id_str}`)).catch(console.error);
